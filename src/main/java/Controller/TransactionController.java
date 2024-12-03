@@ -50,8 +50,8 @@ public class TransactionController {
                     "INSERT INTO \"Transaction\" (ID, Amount, Type, AccountID, MerchantName, MerchantType, TransactionDateTime) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
             pstmt.setString(1, transaction.getTransactionId().toString());
-            pstmt.setString(2, transaction.getTransactionType().toString());
-            pstmt.setDouble(3, transaction.getAmount());
+            pstmt.setDouble(2, transaction.getAmount());
+            pstmt.setString(3, transaction.getTransactionType().toString());
             pstmt.setString(4, accountNumber);
             pstmt.setString(5, transaction.getRecipient().getMerchantName());
             pstmt.setString(6, transaction.getRecipient().getMerchantType());

@@ -7,6 +7,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Scanner;
+import java.util.UUID;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class AccountController {
     public static void crudAccount(Scanner scanner) {
@@ -216,17 +219,34 @@ public class AccountController {
             
             double newBalance = currentBalance + depositAmount;
             
-            PreparedStatement updateStmt = connection.prepareStatement(
-                "UPDATE Account SET Balance = ? WHERE AccountNumber = ?"
-            );
-            updateStmt.setDouble(1, newBalance);
-            updateStmt.setString(2, accountNumber);
-            
-            int result = updateStmt.executeUpdate();
-            if (result > 0) {
+            connection.setAutoCommit(false);
+            try {
+                PreparedStatement updateStmt = connection.prepareStatement(
+                    "UPDATE Account SET Balance = ? WHERE AccountNumber = ?"
+                );
+                updateStmt.setDouble(1, newBalance);
+                updateStmt.setString(2, accountNumber);
+                updateStmt.executeUpdate();
+
+                PreparedStatement transactionStmt = connection.prepareStatement(
+                    "INSERT INTO \"Transaction\" (ID, Amount, Type, AccountID, MerchantName, MerchantType, TransactionDateTime) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)"
+                );
+                transactionStmt.setString(1, UUID.randomUUID().toString());
+                transactionStmt.setDouble(2, depositAmount);
+                transactionStmt.setString(3, "CUSTOMER");
+                transactionStmt.setString(4, accountNumber);
+                transactionStmt.setString(5, "Bank Deposit");
+                transactionStmt.setString(6, "DEPOSIT");
+                transactionStmt.setString(7, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                transactionStmt.executeUpdate();
+
+                connection.commit();
                 System.out.println("Funds Deposited\n");
-            } else {
+            } catch (SQLException e) {
+                connection.rollback();
                 System.out.println("Failed to process deposit.\n");
+                throw e;
             }
             
         } catch (SQLException e) {
@@ -271,17 +291,34 @@ public class AccountController {
             
             double newBalance = currentBalance - withdrawAmount;
             
-            PreparedStatement updateStmt = connection.prepareStatement(
-                "UPDATE Account SET Balance = ? WHERE AccountNumber = ?"
-            );
-            updateStmt.setDouble(1, newBalance);
-            updateStmt.setString(2, accountNumber);
-            
-            int result = updateStmt.executeUpdate();
-            if (result > 0) {
+            connection.setAutoCommit(false);
+            try {
+                PreparedStatement updateStmt = connection.prepareStatement(
+                    "UPDATE Account SET Balance = ? WHERE AccountNumber = ?"
+                );
+                updateStmt.setDouble(1, newBalance);
+                updateStmt.setString(2, accountNumber);
+                updateStmt.executeUpdate();
+
+                PreparedStatement transactionStmt = connection.prepareStatement(
+                    "INSERT INTO \"Transaction\" (ID, Amount, Type, AccountID, MerchantName, MerchantType, TransactionDateTime) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)"
+                );
+                transactionStmt.setString(1, UUID.randomUUID().toString());
+                transactionStmt.setDouble(2, withdrawAmount);
+                transactionStmt.setString(3, "CUSTOMER");
+                transactionStmt.setString(4, accountNumber);
+                transactionStmt.setString(5, "Bank Withdrawal");
+                transactionStmt.setString(6, "WITHDRAWAL");
+                transactionStmt.setString(7, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                transactionStmt.executeUpdate();
+
+                connection.commit();
                 System.out.println("Funds Withdrawn");
-            } else {
+            } catch (SQLException e) {
+                connection.rollback();
                 System.out.println("Failed to process withdrawal.");
+                throw e;
             }
             
         } catch (SQLException e) {

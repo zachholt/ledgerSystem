@@ -4,9 +4,12 @@ import Controller.AccountController;
 import Controller.CustomerController;
 import Controller.TransactionController;
 import Controller.ReportsController;
+import Model.DatabaseCreator;
 
 public class Main {
     public static void main(String[] args) {
+        DatabaseCreator.createDatabase();
+
         Scanner scanner = new Scanner(System.in);
         System.out.println("Welcome to the Code School Bank of Awesomeness!\n-----------------------------------------------\n");
 

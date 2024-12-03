@@ -41,7 +41,7 @@ public class CustomerController {
 
         try (Connection connection = DriverManager.getConnection(url)) {
             PreparedStatement preparedStatement = connection.prepareStatement(
-                "INSERT INTO Customer (Name, PhoneNumber, StreetAddress, City, State, ZipCode, CreatedDate, DOB) VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT INTO Customer (Name, DOB, PhoneNumber, StreetAddress, City, State, ZipCode, CreatedDate) VALUES (?,?,?,?,?,?,?,?)",
                 Statement.RETURN_GENERATED_KEYS);
 
             preparedStatement.setString(1, newCustomer.getName());

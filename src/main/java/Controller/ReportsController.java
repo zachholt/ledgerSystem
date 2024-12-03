@@ -153,81 +153,92 @@ public class ReportsController {
 
     public static void generateCustomerReport(String customerName, String outputPath) {
         try (Connection connection = DriverManager.getConnection(DATABASE_URL)) {
-            String customerQuery = "SELECT c.Name as CustomerName, " +
-                    "a.ID as AccountID, a.Name as AccountName, a.Balance, " +
+            String customerIdQuery = "SELECT ID FROM Customer WHERE Name = ?";
+            String customerId = null;
+            
+            try (PreparedStatement pstmt = connection.prepareStatement(customerIdQuery)) {
+                pstmt.setString(1, customerName);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    customerId = rs.getString("ID");
+                }
+            }
+            
+            if (customerId == null) {
+                System.out.println("Customer not found: " + customerName);
+                return;
+            }
+
+            String customerQuery = "SELECT " +
+                    "a.AccountNumber, a.Name as AccountName, a.Balance, " +
                     "t.Amount as TransactionAmount, t.Type as TransactionType, " +
                     "t.TransactionDateTime, t.MerchantName " +
-                    "FROM Customer c " +
-                    "LEFT JOIN Account a ON c.ID = a.CustomerID " +
-                    "LEFT JOIN \"Transaction\" t ON a.ID = t.AccountID " +
-                    "WHERE c.Name = ? " +
+                    "FROM Account a " +
+                    "LEFT JOIN \"Transaction\" t ON t.AccountID = a.AccountNumber " +
+                    "WHERE a.CustomerID = ? " +
                     "ORDER BY a.Name, t.TransactionDateTime DESC";
 
             Map<String, Account> accounts = new HashMap<>();
             Map<String, List<Transaction>> accountTransactions = new HashMap<>();
             double totalBalance = 0.0;
-            boolean customerFound = false;
 
             try (PreparedStatement pstmt = connection.prepareStatement(customerQuery)) {
-                pstmt.setString(1, customerName);
+                pstmt.setString(1, customerId);
                 ResultSet rs = pstmt.executeQuery();
 
                 while (rs.next()) {
-                    customerFound = true;
-                    String accountId = rs.getString("AccountID");
+                    String accountNumber = rs.getString("AccountNumber");
 
-                    if (accountId != null && !accounts.containsKey(accountId)) {
+                    if (!accounts.containsKey(accountNumber)) {
                         Account account = new Account();
-                        account.setId(Integer.parseInt(accountId));
+                        account.setAccountNumber(accountNumber);
                         account.setAccountName(rs.getString("AccountName"));
                         account.setBalance(rs.getDouble("Balance"));
-                        accounts.put(accountId, account);
-                        accountTransactions.put(accountId, new ArrayList<>());
+                        accounts.put(accountNumber, account);
+                        accountTransactions.put(accountNumber, new ArrayList<>());
                         totalBalance += account.getBalance();
                     }
 
-                    if (rs.getString("TransactionDateTime") != null) {
+                    String transactionDateTime = rs.getString("TransactionDateTime");
+                    if (transactionDateTime != null) {
                         Transaction transaction = new Transaction();
                         transaction.setAmount(rs.getDouble("TransactionAmount"));
                         transaction.setTransactionType(Transaction.TransactionType.valueOf(rs.getString("TransactionType")));
                         Transaction.Recipient recipient = new Transaction.Recipient();
                         recipient.setMerchantName(rs.getString("MerchantName"));
                         transaction.setRecipient(recipient);
-                        accountTransactions.get(accountId).add(transaction);
+                        accountTransactions.get(accountNumber).add(transaction);
                     }
                 }
             }
 
-            if (!customerFound) {
-                System.out.println("Customer not found: " + customerName);
-                return;
-            }
-
             StringBuilder report = new StringBuilder();
             report.append("Bank Accounting Report\n\n");
-
             report.append("Statement for ").append(customerName).append("\n");
-
+            
             LocalDate today = LocalDate.now();
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
             report.append("Statement Date: ").append(today.format(dateFormatter)).append("\n\n");
-
+            
             report.append(String.format("Current Total Balance: $%,.2f\n\n", totalBalance));
-
-            DateTimeFormatter transactionFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
             for (Map.Entry<String, Account> entry : accounts.entrySet()) {
                 Account account = entry.getValue();
                 report.append(String.format("%s - $%,.2f\n", account.getAccountName(), account.getBalance()));
                 report.append("Transactions:\n");
-
-                for (Transaction transaction : accountTransactions.get(entry.getKey())) {
-                    String prefix = transaction.getTransactionType() == Transaction.TransactionType.CREDIT ? "+" : "-";
-                    report.append(String.format("%s %s $%.2f\n",
-                            LocalDateTime.now().format(transactionFormatter),
-                            transaction.getRecipient().getMerchantName(),
-                            Math.abs(transaction.getAmount())
-                    ).replace("$", prefix + "$"));
+                
+                List<Transaction> transactions = accountTransactions.get(entry.getKey());
+                if (transactions.isEmpty()) {
+                    report.append("No transactions found\n");
+                } else {
+                    for (Transaction transaction : transactions) {
+                        String prefix = transaction.getTransactionType() == Transaction.TransactionType.CREDIT ? "+" : "-";
+                        report.append(String.format("%s %s $%.2f\n",
+                                today.format(dateFormatter),
+                                transaction.getRecipient().getMerchantName(),
+                                Math.abs(transaction.getAmount())
+                        ).replace("$", prefix + "$"));
+                    }
                 }
                 report.append("\n");
             }
@@ -237,6 +248,7 @@ public class ReportsController {
                 writer.write(report.toString());
             }
         } catch (SQLException | IOException e) {
+            System.out.println("Error details: " + e.getMessage());
             throw new RuntimeException("Error generating customer report: " + e.getMessage());
         }
     }
