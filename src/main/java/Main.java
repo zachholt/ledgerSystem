@@ -35,6 +35,7 @@ public class Main {
                 AccountController.depositWithdraw(scanner);
             }
         }
+        scanner.close();
     }
 
     public static void printMenu() {
