@@ -11,7 +11,8 @@ public class Transaction {
 
     public enum TransactionType {
         DEBIT,
-        CREDIT
+        CREDIT,
+        CUSTOMER
     }
 
     public static class Recipient {

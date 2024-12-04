@@ -234,7 +234,7 @@ public class AccountController {
                 );
                 transactionStmt.setString(1, UUID.randomUUID().toString());
                 transactionStmt.setDouble(2, depositAmount);
-                transactionStmt.setString(3, "CUSTOMER");
+                transactionStmt.setString(3, "CREDIT");
                 transactionStmt.setString(4, accountNumber);
                 transactionStmt.setString(5, "Bank Deposit");
                 transactionStmt.setString(6, "DEPOSIT");
@@ -306,7 +306,7 @@ public class AccountController {
                 );
                 transactionStmt.setString(1, UUID.randomUUID().toString());
                 transactionStmt.setDouble(2, withdrawAmount);
-                transactionStmt.setString(3, "CUSTOMER");
+                transactionStmt.setString(3, "DEBIT");
                 transactionStmt.setString(4, accountNumber);
                 transactionStmt.setString(5, "Bank Withdrawal");
                 transactionStmt.setString(6, "WITHDRAWAL");
